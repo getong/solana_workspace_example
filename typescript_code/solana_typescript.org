@@ -1,0 +1,27 @@
+* solana typescript
+
+** @solana/web3.js@2
+
+Now Available: Solana JavaScript SDK 2.0
+
+Before December 16, 2024
+
+#+begin_src shell
+npm install @solana/web3.js         # Installs v1.x
+npm install @solana/web3.js@latest  # Installs v1.x
+npm install @solana/web3.js@1       # Installs v1.x
+npm install @solana/web3.js@2       # Installs v2.x
+#+end_src
+
+On {Postponed until further notice}:
+
+#+begin_src shell
+npm install @solana/web3.js         # Installs v2.x
+npm install @solana/web3.js@latest  # Installs v2.x
+npm install @solana/web3.js@1       # Installs v1.x
+npm install @solana/web3.js@2       # Installs v2.x
+#+end_src
+
+copy from https://www.anza.xyz/blog/solana-web3-js-2-release
+
+https://github.com/anza-xyz/solana-web3.js
