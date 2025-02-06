@@ -1,0 +1,14 @@
+{
+  "name": "solana_get_genesis_hash_example",
+  "module": "src/index.tsx",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@solana/web3.js": "2"
+  }
+}
