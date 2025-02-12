@@ -4,3 +4,8 @@
 [[https://ackee.xyz/solana/book/latest/][Solana Handbook]]
 
 https://docs.anza.xyz/cli/install
+
+#+begin_src shell
+sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.13/install)"
+cargo-build-sbf
+#+end_src
