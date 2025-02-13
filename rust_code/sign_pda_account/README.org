@@ -1,0 +1,10 @@
+* sign with pda
+
+https://solana.com/developers/cookbook/accounts/sign-with-pda
+
+
+#+begin_src shell
+cargo-build-sbf
+
+solana program deploy target/sbf-solana-solana/release/sign_pda_account.so
+#+end_src
