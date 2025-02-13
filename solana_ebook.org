@@ -9,3 +9,5 @@ https://docs.anza.xyz/cli/install
 sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.13/install)"
 cargo-build-sbf
 #+end_src
+
+no more need anchor and install solana manually.
