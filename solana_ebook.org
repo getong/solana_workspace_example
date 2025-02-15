@@ -15,3 +15,24 @@ no more need anchor and install solana manually.
 
 [[https://blog.logrocket.com/building-token-solana/][Building your own token with Solana]]
 [[http://defiplot.com/blog/building-your-own-token-with-solana/][构建自己的Solana代币]]
+
+#+begin_src shell
+$ solana config set --url https://api.devnet.solana.com
+
+$ solana config get
+
+$ spl-token create-token
+<token-identifier>
+
+$ spl-token create-account <token-identifier>
+
+$ spl-token mint <token-identifier> <token-amount>
+
+$ spl-token balance <token-identifier>
+
+$ spl-token authorize  <token-identifier> mint --disable
+
+$ spl-token burn <token-account-addresss> <amount>
+
+$ spl-token transfer \[FLAGS\] [OPTIONS] <TOKEN_ADDRESS> <TOKEN_AMOUNT> <RECIPIENT_ADDRESS or RECIPIENT_TOKEN_ACCOUNT_ADDRESS>
+#+end_src
