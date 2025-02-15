@@ -11,3 +11,7 @@ cargo-build-sbf
 #+end_src
 
 no more need anchor and install solana manually.
+
+
+[[https://blog.logrocket.com/building-token-solana/][Building your own token with Solana]]
+[[http://defiplot.com/blog/building-your-own-token-with-solana/][构建自己的Solana代币]]
