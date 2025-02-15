@@ -1,0 +1,14 @@
+{
+  "name": "bip_example",
+  "module": "src/index.tsx",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "bip39": "^3.1.0"
+  }
+}
