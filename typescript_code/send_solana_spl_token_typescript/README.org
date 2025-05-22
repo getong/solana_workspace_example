@@ -1,0 +1,18 @@
+* send_solana_spl_token_typescript
+:PROPERTIES:
+:CUSTOM_ID: send_solana_spl_token_typescript
+:END:
+To install dependencies:
+
+#+begin_src sh
+bun install
+#+end_src
+
+To run:
+
+#+begin_src sh
+bun run src/main.ts
+#+end_src
+
+This project was created using =bun init= in bun v1.1.42.
+[[https://bun.sh][Bun]] is a fast all-in-one JavaScript runtime.
