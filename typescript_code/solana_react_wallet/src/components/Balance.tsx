@@ -2,7 +2,7 @@ import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Text, Tooltip } from "@radix-ui/themes";
 import { address } from "@solana/kit";
 import type { UiWalletAccount } from "@wallet-standard/react";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useEffect, useState } from "react";
 import useSWRSubscription from "swr/subscription";
 
 import { ChainContext } from "../context/ChainContext";
@@ -18,6 +18,7 @@ type Props = Readonly<{
 const seenErrors = new WeakSet();
 
 export function Balance({ account }: Props) {
+  const [mounted, setMounted] = useState(false);
   const { chain } = useContext(ChainContext);
   const { rpc, rpcSubscriptions } = useContext(RpcContext);
   const subscribe = useMemo(
@@ -25,9 +26,18 @@ export function Balance({ account }: Props) {
     [rpc, rpcSubscriptions],
   );
   const { data: lamports, error } = useSWRSubscription(
-    { address: address(account.address), chain },
+    mounted ? { address: address(account.address), chain } : null,
     subscribe,
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <Text>&ndash;</Text>;
+  }
+
   if (error && !seenErrors.has(error)) {
     return (
       <>

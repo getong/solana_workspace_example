@@ -22,6 +22,7 @@ type Props = Readonly<{
 export function ConnectWalletMenu({ children }: Props) {
   const { current: NO_ERROR } = useRef(Symbol());
   const wallets = useWallets();
+  console.log("Detected wallets:", wallets);
   const [selectedWalletAccount, setSelectedWalletAccount] = useContext(
     SelectedWalletAccountContext,
   );

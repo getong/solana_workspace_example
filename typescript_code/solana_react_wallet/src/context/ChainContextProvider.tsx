@@ -17,7 +17,7 @@ export function ChainContextProvider({
     switch (chain) {
       // @ts-expect-error Intentional fall through
       case "solana:mainnet":
-        if (process.env.REACT_EXAMPLE_APP_ENABLE_MAINNET === "true") {
+        if (import.meta.env.VITE_ENABLE_MAINNET === "true") {
           return {
             chain: "solana:mainnet",
             displayName: "Mainnet Beta",

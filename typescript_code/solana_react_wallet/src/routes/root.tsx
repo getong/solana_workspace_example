@@ -7,6 +7,7 @@ import {
   Heading,
   Spinner,
   Text,
+  Card,
 } from "@radix-ui/themes";
 import { getUiWalletAccountStorageKey } from "@wallet-standard/react";
 import { Suspense, useContext } from "react";
@@ -30,7 +31,7 @@ function Root() {
       getUiWalletAccountStorageKey(selectedWalletAccount),
   ].filter(Boolean);
   return (
-    <Container mx={{ initial: "3", xs: "6" }}>
+    <Container mx={{ initial: "3", xs: "6" }} py="6">
       {selectedWalletAccount ? (
         <Flex gap="6" direction="column">
           <Flex gap="2">
@@ -94,7 +95,14 @@ function Root() {
           </DataList.Root>
         </Flex>
       ) : (
-        <Text as="p">Click &ldquo;Connect Wallet&rdquo; to get started.</Text>
+        <Card>
+          <Flex direction="column" align="center" gap="4" p="6">
+            <Heading size="6">Welcome to Solana Wallet</Heading>
+            <Text as="p" size="4" align="center">
+              Click &ldquo;Connect Wallet&rdquo; to get started.
+            </Text>
+          </Flex>
+        </Card>
       )}
     </Container>
   );

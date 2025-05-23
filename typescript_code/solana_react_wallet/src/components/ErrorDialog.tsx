@@ -1,5 +1,5 @@
-import { AlertDialog, Blockquote, Button, Flex } from "@radix-ui/themes";
-import { useState } from "react";
+import { AlertDialog, Button, Flex, Text } from "@radix-ui/themes";
+import { useEffect, useState } from "react";
 
 import { getErrorMessage } from "../errors";
 
@@ -10,7 +10,18 @@ type Props = Readonly<{
 }>;
 
 export function ErrorDialog({ error, onClose, title }: Props) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setIsOpen(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <AlertDialog.Root
       open={isOpen}
@@ -26,8 +37,8 @@ export function ErrorDialog({ error, onClose, title }: Props) {
         <AlertDialog.Title color="red">
           {title ?? "We encountered the following error"}
         </AlertDialog.Title>
-        <AlertDialog.Description>
-          <Blockquote>{getErrorMessage(error, "Unknown")}</Blockquote>
+        <AlertDialog.Description asChild>
+          <Text size="3">{getErrorMessage(error, "Unknown")}</Text>
         </AlertDialog.Description>
         <Flex mt="4" justify="end">
           <AlertDialog.Action>
