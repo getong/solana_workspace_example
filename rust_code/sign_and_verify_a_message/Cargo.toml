@@ -1,0 +1,8 @@
+[package]
+name = "sign_and_verify_a_message"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+solana-sdk = "2.2.2"
