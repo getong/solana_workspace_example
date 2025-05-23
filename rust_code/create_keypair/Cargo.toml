@@ -1,0 +1,7 @@
+[package]
+name = "create_keypair"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+solana-sdk = "2.2.2"
