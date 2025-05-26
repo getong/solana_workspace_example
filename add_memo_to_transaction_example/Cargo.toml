@@ -1,0 +1,11 @@
+[package]
+name = "add_memo_to_transaction_example"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+solana-client = "2.2.7"
+solana-sdk = "2.2.2"
+spl-memo = "6.0.0"
+tokio = { version = "1.45.1", features = ["full"] }
