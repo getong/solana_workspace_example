@@ -1,0 +1,5 @@
+* solana dapp basic design
+
+- transaction need gas fee
+- solana program as the rpc server
+- solana program save the data on chain, as a online global database.
