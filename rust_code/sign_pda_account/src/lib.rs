@@ -1,7 +1,11 @@
 use solana_program::{
-  account_info::next_account_info, account_info::AccountInfo, entrypoint,
-  entrypoint::ProgramResult, program::invoke_signed, pubkey::Pubkey, system_instruction,
+  account_info::{next_account_info, AccountInfo},
+  entrypoint,
+  entrypoint::ProgramResult,
+  program::invoke_signed,
+  pubkey::Pubkey,
 };
+use solana_system_interface::instruction as system_instruction;
 
 entrypoint!(process_instruction);
 
