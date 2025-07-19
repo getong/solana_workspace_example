@@ -1,0 +1,11 @@
+[package]
+name = "counter_idl_example"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anchor-client = { version = "0.31.1", features = ["async"] }
+anchor-lang = "0.31.1"
+anyhow = "1.0.98"
+solana-system-interface = "1.0.0"
+tokio = { version = "1.46.1", features = ["full"] }
