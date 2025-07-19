@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anchor_client::{
   Client, Cluster,
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
   // Generate Keypairs and request airdrop
   let payer = Keypair::new();
-  let receiver = Keypair::new();
+  let receiver = Arc::new(Keypair::new());
   println!("Generated Keypairs:");
   println!("   Payer: {}", payer.pubkey());
   println!("   Counter: {}", receiver.pubkey());
@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
   // Create program client
   let provider = Client::new_with_options(
     Cluster::Localnet,
-    Rc::new(payer),
+    Arc::new(payer),
     CommitmentConfig::confirmed(),
   );
   let program = provider.program(counter::ID)?;
@@ -74,15 +74,13 @@ async fn main() -> anyhow::Result<()> {
     .request()
     .instruction(initialize_ix)
     .instruction(increment_ix)
-    .signer(&receiver)
+    .signer(receiver.clone())
     .send()
     .await?;
   println!("   Transaction confirmed: {}", signature);
 
   println!("\nFetch counter account data");
-  let counter_account: Counter = program
-    .account::<Counter>(receiver.pubkey())
-    .await?;
+  let counter_account: Counter = program.account::<Counter>(receiver.pubkey()).await?;
   println!("   Counter value: {}", counter_account.count);
   Ok(())
 }
