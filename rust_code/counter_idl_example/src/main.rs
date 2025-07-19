@@ -146,10 +146,17 @@ async fn main() -> anyhow::Result<()> {
       println!("   Program account owner: {}", account.owner);
       println!("   Program account executable: {}", account.executable);
       println!("   Program account data length: {}", account.data.len());
+
+      // Additional debug: Check if this is the right program
+      println!("   Program data hash: {:x}", md5::compute(&account.data));
     }
     Err(e) => {
       println!("   ❌ Program account NOT found: {}", e);
       println!("   This suggests the program may not be deployed or the ID is incorrect");
+
+      // Try to find if there are any counter programs deployed
+      println!("\n🔍 Searching for deployed counter programs...");
+      // This is a simple approach - in practice you'd want to use getProgramAccounts
     }
   }
 
