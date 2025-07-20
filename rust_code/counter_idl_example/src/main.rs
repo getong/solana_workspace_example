@@ -4,8 +4,8 @@ use anchor_client::{
   Client, Cluster,
   solana_client::rpc_client::RpcClient,
   solana_sdk::{
-    commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, signature::Keypair,
-    signer::Signer,
+    commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey,
+    signature::Keypair, signer::Signer,
   },
 };
 use anchor_lang::prelude::*;
@@ -24,12 +24,16 @@ async fn main() -> anyhow::Result<()> {
     CommitmentConfig::confirmed(),
   );
 
-  // Generate Keypairs and request airdrop
+  // Generate Keypair and request airdrop
   let payer = Keypair::new();
-  let receiver = Arc::new(Keypair::new());
-  println!("Generated Keypairs:");
+
+  // Find the PDA for the counter account using the same seeds as in lib.rs
+  let (counter_pda, _bump) =
+    Pubkey::find_program_address(&[b"counter", payer.pubkey().as_ref()], &counter::ID);
+
+  println!("Generated Keypair:");
   println!("   Payer: {}", payer.pubkey());
-  println!("   Counter: {}", receiver.pubkey());
+  println!("   Counter PDA: {}", counter_pda);
 
   println!("\nRequesting 1 SOL airdrop to payer");
   let airdrop_signature = connection.request_airdrop(&payer.pubkey(), LAMPORTS_PER_SOL)?;
@@ -53,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
   let initialize_ix = program
     .request()
     .accounts(accounts::Initialize {
-      counter: receiver.pubkey(),
+      counter: counter_pda,
       payer: program.payer(),
       system_program: system_program::ID,
     })
@@ -64,7 +68,8 @@ async fn main() -> anyhow::Result<()> {
   let increment_ix = program
     .request()
     .accounts(accounts::Increment {
-      counter: receiver.pubkey(),
+      counter: counter_pda,
+      payer: program.payer(),
     })
     .args(args::Increment)
     .instructions()?
@@ -74,13 +79,12 @@ async fn main() -> anyhow::Result<()> {
     .request()
     .instruction(initialize_ix)
     .instruction(increment_ix)
-    .signer(receiver.clone())
     .send()
     .await?;
   println!("   Transaction confirmed: {}", signature);
 
   println!("\nFetch counter account data");
-  let counter_account: Counter = program.account::<Counter>(receiver.pubkey()).await?;
+  let counter_account: Counter = program.account::<Counter>(counter_pda).await?;
   println!("   Counter value: {}", counter_account.count);
   Ok(())
 }

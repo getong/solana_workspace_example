@@ -30,7 +30,9 @@ pub struct Initialize<'info> {
   #[account(
         init,
         payer = payer,
-        space = 8 + 8
+        space = 8 + 8,
+        seeds = [b"counter", payer.key().as_ref()],
+        bump
     )]
   pub counter: Account<'info, Counter>,
   pub system_program: Program<'info, System>,
@@ -38,8 +40,14 @@ pub struct Initialize<'info> {
 
 #[derive(Accounts)]
 pub struct Increment<'info> {
-  #[account(mut)]
+  #[account(
+    mut,
+    seeds = [b"counter", payer.key().as_ref()],
+    bump
+  )]
   pub counter: Account<'info, Counter>,
+
+  pub payer: Signer<'info>,
 }
 
 #[account]
