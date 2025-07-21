@@ -35,8 +35,8 @@ async fn main() -> anyhow::Result<()> {
   println!("   Payer: {}", payer.pubkey());
   println!("   Counter PDA: {}", counter_pda);
 
-  println!("\nRequesting 1 SOL airdrop to payer");
-  let airdrop_signature = connection.request_airdrop(&payer.pubkey(), LAMPORTS_PER_SOL)?;
+  println!("\nRequesting 10 SOL airdrop to payer");
+  let airdrop_signature = connection.request_airdrop(&payer.pubkey(), 10 * LAMPORTS_PER_SOL)?;
 
   // Wait for airdrop confirmation
   while !connection.confirm_transaction(&airdrop_signature)? {
@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
   let program = provider.program(counter::ID)?;
 
   // Build and send instructions
-  println!("\nSend transaction with initialize and increment instructions");
+  println!("\nSend transaction with initialize, 7 increments, and 5 decrements instructions");
   let initialize_ix = program
     .request()
     .accounts(accounts::Initialize {
@@ -65,7 +65,8 @@ async fn main() -> anyhow::Result<()> {
     .instructions()?
     .remove(0);
 
-  let increment_ix = program
+  // Create 7 increment instructions (so we can safely do 5 decrements)
+  let increment_ix_1 = program
     .request()
     .accounts(accounts::Increment {
       counter: counter_pda,
@@ -75,17 +76,165 @@ async fn main() -> anyhow::Result<()> {
     .instructions()?
     .remove(0);
 
+  let increment_ix_2 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  let increment_ix_3 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  let increment_ix_4 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  let increment_ix_5 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  let increment_ix_6 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  let increment_ix_7 = program
+    .request()
+    .accounts(accounts::Increment {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Increment)
+    .instructions()?
+    .remove(0);
+
+  // Create 5 decrement instructions
+  let decrement_ix_1 = program
+    .request()
+    .accounts(accounts::Decrement {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Decrement)
+    .instructions()?
+    .remove(0);
+
+  let decrement_ix_2 = program
+    .request()
+    .accounts(accounts::Decrement {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Decrement)
+    .instructions()?
+    .remove(0);
+
+  let decrement_ix_3 = program
+    .request()
+    .accounts(accounts::Decrement {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Decrement)
+    .instructions()?
+    .remove(0);
+
+  let decrement_ix_4 = program
+    .request()
+    .accounts(accounts::Decrement {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Decrement)
+    .instructions()?
+    .remove(0);
+
+  let decrement_ix_5 = program
+    .request()
+    .accounts(accounts::Decrement {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::Decrement)
+    .instructions()?
+    .remove(0);
+
   let signature = program
     .request()
     .instruction(initialize_ix)
-    .instruction(increment_ix)
+    .instruction(increment_ix_1)
+    .instruction(increment_ix_2)
+    .instruction(increment_ix_3)
+    .instruction(increment_ix_4)
+    .instruction(increment_ix_5)
+    .instruction(increment_ix_6)
+    .instruction(increment_ix_7)
+    .instruction(decrement_ix_1)
+    .instruction(decrement_ix_2)
+    .instruction(decrement_ix_3)
+    .instruction(decrement_ix_4)
+    .instruction(decrement_ix_5)
     .send()
     .await?;
   println!("   Transaction confirmed: {}", signature);
 
+  // Call get_count instruction to check current value
+  println!("\nCalling get_count instruction to check current counter value");
+  let get_count_ix = program
+    .request()
+    .accounts(accounts::GetCount {
+      counter: counter_pda,
+      payer: program.payer(),
+    })
+    .args(args::GetCount)
+    .instructions()?
+    .remove(0);
+
+  let get_count_signature = program.request().instruction(get_count_ix).send().await?;
+  println!(
+    "   Get count transaction confirmed: {}",
+    get_count_signature
+  );
+
   println!("\nFetch counter account data");
   let counter_account: Counter = program.account::<Counter>(counter_pda).await?;
-  println!("   Counter value: {}", counter_account.count);
+  println!("   Final counter value: {}", counter_account.count);
+  println!("   Expected: 0 + 7 (increments) - 5 (decrements) = 2");
+
+  if counter_account.count == 2 {
+    println!("   ✅ Counter value matches expected result!");
+  } else {
+    println!("   ❌ Counter value doesn't match expected result");
+  }
+
   Ok(())
 }
 

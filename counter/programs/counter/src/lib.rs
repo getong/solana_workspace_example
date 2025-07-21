@@ -16,8 +16,23 @@ pub mod counter {
     let counter = &mut ctx.accounts.counter;
     msg!("Previous counter: {}", counter.count);
 
-    counter.count += 1;
+    counter.count = counter.count.checked_add(1).unwrap();
     msg!("Counter incremented! Current count: {}", counter.count);
+    Ok(())
+  }
+
+  pub fn decrement(ctx: Context<Decrement>) -> Result<()> {
+    let counter = &mut ctx.accounts.counter;
+    msg!("Previous counter: {}", counter.count);
+
+    counter.count = counter.count.checked_sub(1).unwrap();
+    msg!("Counter decremented! Current count: {}", counter.count);
+    Ok(())
+  }
+
+  pub fn get_count(ctx: Context<GetCount>) -> Result<()> {
+    let counter = &ctx.accounts.counter;
+    msg!("Current counter value: {}", counter.count);
     Ok(())
   }
 }
@@ -42,6 +57,29 @@ pub struct Initialize<'info> {
 pub struct Increment<'info> {
   #[account(
     mut,
+    seeds = [b"counter", payer.key().as_ref()],
+    bump
+  )]
+  pub counter: Account<'info, Counter>,
+
+  pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Decrement<'info> {
+  #[account(
+    mut,
+    seeds = [b"counter", payer.key().as_ref()],
+    bump
+  )]
+  pub counter: Account<'info, Counter>,
+
+  pub payer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct GetCount<'info> {
+  #[account(
     seeds = [b"counter", payer.key().as_ref()],
     bump
   )]

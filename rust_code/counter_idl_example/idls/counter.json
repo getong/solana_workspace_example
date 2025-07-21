@@ -8,6 +8,93 @@
   },
   "instructions": [
     {
+      "name": "decrement",
+      "discriminator": [
+        106,
+        227,
+        168,
+        59,
+        248,
+        27,
+        150,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "get_count",
+      "discriminator": [
+        224,
+        158,
+        79,
+        100,
+        65,
+        72,
+        197,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "counter",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "increment",
       "discriminator": [
         11,
