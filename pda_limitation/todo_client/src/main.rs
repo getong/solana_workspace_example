@@ -114,7 +114,7 @@ impl AccountDeserialize for TodoItem {
 pub struct InitializeTodoListInstruction {}
 
 impl Discriminator for InitializeTodoListInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[175, 175, 109, 31, 13, 152, 155, 237];
+  const DISCRIMINATOR: &'static [u8] = &[110, 156, 253, 119, 218, 241, 220, 171];
 }
 
 impl InstructionData for InitializeTodoListInstruction {}
@@ -126,32 +126,29 @@ pub struct CreateTodoInstruction {
 }
 
 impl Discriminator for CreateTodoInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[24, 30, 200, 40, 5, 28, 7, 119];
+  const DISCRIMINATOR: &'static [u8] = &[250, 161, 142, 148, 131, 48, 194, 181];
 }
 
 impl InstructionData for CreateTodoInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct UpdateTodoInstruction {
-  pub todo_id: u64,
   pub title: Option<String>,
   pub description: Option<String>,
   pub completed: Option<bool>,
 }
 
 impl Discriminator for UpdateTodoInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[219, 200, 88, 176, 158, 63, 253, 46];
+  const DISCRIMINATOR: &'static [u8] = &[105, 8, 31, 183, 159, 73, 203, 134];
 }
 
 impl InstructionData for UpdateTodoInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct DeleteTodoInstruction {
-  pub todo_id: u64,
-}
+pub struct DeleteTodoInstruction {}
 
 impl Discriminator for DeleteTodoInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[111, 18, 87, 154, 13, 197, 139, 175];
+  const DISCRIMINATOR: &'static [u8] = &[224, 212, 234, 177, 90, 57, 219, 115];
 }
 
 impl InstructionData for DeleteTodoInstruction {}
@@ -199,8 +196,9 @@ impl TodoClient {
     )
   }
 
-  async fn initialize_todo_list(&self) -> Result<String> {
+  fn initialize_todo_list(&self) -> Result<String> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
+    println!("Todo list PDA: {}", todo_list_pda);
 
     let accounts = vec![
       AccountMeta::new(todo_list_pda, false),
@@ -219,12 +217,15 @@ impl TodoClient {
     Ok(tx.to_string())
   }
 
-  async fn create_todo(&self, title: String, description: String) -> Result<String> {
+  fn create_todo(&self, title: String, description: String) -> Result<String> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
 
     // Fetch current todo count
     let todo_list_account = self.program.account::<TodoList>(todo_list_pda)?;
     let (todo_item_pda, _) = self.get_todo_item_pda(todo_list_account.todo_count);
+    
+    println!("Creating todo with ID: {}", todo_list_account.todo_count);
+    println!("Todo item PDA: {}", todo_item_pda);
 
     let accounts = vec![
       AccountMeta::new(todo_item_pda, false),
@@ -244,7 +245,7 @@ impl TodoClient {
     Ok(tx.to_string())
   }
 
-  async fn update_todo(
+  fn update_todo(
     &self,
     todo_id: u64,
     title: Option<String>,
@@ -264,7 +265,6 @@ impl TodoClient {
       .request()
       .accounts(accounts)
       .args(UpdateTodoInstruction {
-        todo_id,
         title,
         description,
         completed,
@@ -275,7 +275,7 @@ impl TodoClient {
     Ok(tx.to_string())
   }
 
-  async fn delete_todo(&self, todo_id: u64) -> Result<String> {
+  fn delete_todo(&self, todo_id: u64) -> Result<String> {
     let (todo_item_pda, _) = self.get_todo_item_pda(todo_id);
 
     let accounts = vec![
@@ -288,31 +288,31 @@ impl TodoClient {
       .program
       .request()
       .accounts(accounts)
-      .args(DeleteTodoInstruction { todo_id })
+      .args(DeleteTodoInstruction {})
       .signer(&*self.payer)
       .send()?;
 
     Ok(tx.to_string())
   }
 
-  async fn get_todo_list(&self) -> Result<TodoList> {
+  fn get_todo_list(&self) -> Result<TodoList> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
     let account = self.program.account::<TodoList>(todo_list_pda)?;
     Ok(account)
   }
 
-  async fn get_todo_item(&self, todo_id: u64) -> Result<TodoItem> {
+  fn get_todo_item(&self, todo_id: u64) -> Result<TodoItem> {
     let (todo_item_pda, _) = self.get_todo_item_pda(todo_id);
     let account = self.program.account::<TodoItem>(todo_item_pda)?;
     Ok(account)
   }
 
-  async fn list_todos(&self) -> Result<Vec<TodoItem>> {
-    let todo_list = self.get_todo_list().await?;
+  fn list_todos(&self) -> Result<Vec<TodoItem>> {
+    let todo_list = self.get_todo_list()?;
     let mut todos = Vec::new();
 
     for i in 0 .. todo_list.todo_count {
-      match self.get_todo_item(i).await {
+      match self.get_todo_item(i) {
         Ok(todo) => todos.push(todo),
         Err(_) => continue, // Skip deleted todos
       }
@@ -322,19 +322,18 @@ impl TodoClient {
   }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
   let cli = Cli::parse();
-
+  
   let client = TodoClient::new(&cli.url, &cli.keypair, &cli.program_id)?;
 
   match cli.command {
     Commands::Init => {
-      let tx = client.initialize_todo_list().await?;
+      let tx = client.initialize_todo_list()?;
       println!("Todo list initialized. Transaction: {}", tx);
     }
     Commands::Create { title, description } => {
-      let tx = client.create_todo(title, description).await?;
+      let tx = client.create_todo(title, description)?;
       println!("Todo created. Transaction: {}", tx);
     }
     Commands::Update {
@@ -344,16 +343,15 @@ async fn main() -> Result<()> {
       completed,
     } => {
       let tx = client
-        .update_todo(id, title, description, completed)
-        .await?;
+        .update_todo(id, title, description, completed)?;
       println!("Todo updated. Transaction: {}", tx);
     }
     Commands::Delete { id } => {
-      let tx = client.delete_todo(id).await?;
+      let tx = client.delete_todo(id)?;
       println!("Todo deleted. Transaction: {}", tx);
     }
     Commands::List => {
-      let todos = client.list_todos().await?;
+      let todos = client.list_todos()?;
       if todos.is_empty() {
         println!("No todos found.");
       } else {
@@ -370,7 +368,7 @@ async fn main() -> Result<()> {
         }
       }
     }
-    Commands::Get { id } => match client.get_todo_item(id).await {
+    Commands::Get { id } => match client.get_todo_item(id) {
       Ok(todo) => {
         println!("Todo Item:");
         println!("  ID: {}", todo.id);
