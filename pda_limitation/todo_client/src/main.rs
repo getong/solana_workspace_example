@@ -11,6 +11,7 @@ use anchor_client::{
   Client, Cluster, Program,
 };
 use anyhow::Result;
+use borsh::{BorshDeserialize, BorshSerialize};
 use clap::{Parser, Subcommand};
 use solana_sdk::signature::read_keypair_file;
 use solana_system_interface::program as system_program;
@@ -154,6 +155,21 @@ impl Discriminator for RemoveTodoInstruction {
 
 impl InstructionData for RemoveTodoInstruction {}
 
+// Borsh structs for manual deserialization debugging
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
+struct BorshTodoState {
+  key: Pubkey,
+  bump: u8,
+  todos: Vec<BorshTodo>,
+  total_todos: u64,
+}
+
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
+struct BorshTodo {
+  description: String,
+  is_completed: bool,
+}
+
 struct TodoClient {
   program: Program<Rc<Keypair>>,
   payer: Rc<Keypair>,
@@ -285,20 +301,77 @@ impl TodoClient {
       &account_info.data[.. 40.min(account_info.data.len())]
     );
 
-    // Try manual deserialization
+    // Try manual Borsh deserialization
+    let data_without_discriminator = &account_info.data[8 ..]; // Skip discriminator
+
+    // Use a cursor to allow partial deserialization
+    use std::io::{Cursor, Read};
+    let mut cursor = Cursor::new(data_without_discriminator);
+
+    match BorshTodoState::deserialize_reader(&mut cursor) {
+      Ok(borsh_state) => {
+        println!("Borsh deserialization successful!");
+        println!("Key: {}", borsh_state.key);
+        println!("Bump: {}", borsh_state.bump);
+        println!("Total todos: {}", borsh_state.total_todos);
+        println!("Todos count: {}", borsh_state.todos.len());
+        for (i, todo) in borsh_state.todos.iter().enumerate() {
+          println!(
+            "  Todo {}: {} - {}",
+            i,
+            todo.description,
+            if todo.is_completed { "✓" } else { "☐" }
+          );
+        }
+        let bytes_read = cursor.position() as usize;
+        let remaining_bytes = data_without_discriminator.len() - bytes_read;
+        println!(
+          "Bytes read: {}, Remaining bytes (padding): {}",
+          bytes_read, remaining_bytes
+        );
+      }
+      Err(e) => {
+        println!("Borsh deserialization error: {:?}", e);
+
+        // Try to deserialize individual fields to debug
+        println!("\nDebugging field-by-field:");
+        let mut debug_cursor = Cursor::new(data_without_discriminator);
+
+        // Try to read the key (Pubkey = 32 bytes)
+        let mut key_bytes = [0u8; 32];
+        match debug_cursor.read_exact(&mut key_bytes) {
+          Ok(_) => {
+            let key = Pubkey::from(key_bytes);
+            println!("  Key: {} ✓", key);
+          }
+          Err(e) => println!("  Key deserialization failed: {:?}", e),
+        }
+
+        // Try to read the bump (u8 = 1 byte)
+        match u8::deserialize_reader(&mut debug_cursor) {
+          Ok(bump) => println!("  Bump: {} ✓", bump),
+          Err(e) => println!("  Bump deserialization failed: {:?}", e),
+        }
+
+        // Try to read the todos length (as part of Vec)
+        match u64::deserialize_reader(&mut debug_cursor) {
+          Ok(vec_len) => println!("  Todos vector length: {} ✓", vec_len),
+          Err(e) => println!("  Todos length deserialization failed: {:?}", e),
+        }
+      }
+    }
+
+    // Try Anchor deserialization
     let mut data = &account_info.data[8 ..]; // Skip discriminator
     let result = TodoState::deserialize(&mut data);
     match result {
       Ok(state) => {
-        println!("Successfully deserialized!");
-        println!("Key: {}", state.key);
-        println!("Bump: {}", state.bump);
-        println!("Total todos: {}", state.total_todos);
-        println!("Todos count: {}", state.todos.len());
+        println!("Anchor deserialization successful!");
         Ok(state)
       }
       Err(e) => {
-        println!("Deserialization error: {:?}", e);
+        println!("Anchor deserialization error: {:?}", e);
+        // Fallback to anchor client
         let account = self.program.account::<TodoState>(todo_list_pda)?;
         Ok(account)
       }
