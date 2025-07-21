@@ -1,178 +1,160 @@
 # Todo Client IDL
 
-A Rust CLI client for the Solana Todo Program that uses discriminators extracted from the IDL (Interface Definition Language) JSON file for accurate instruction handling.
+A Rust CLI client for interacting with the Solana Todo Program. This client uses the IDL (Interface Definition Language) to dynamically construct program interactions.
 
-## Key Advantages of IDL-derived Client
+## Program Overview
 
-### ✅ **IDL-derived Discriminators**
-- Extracts exact instruction discriminators from the generated IDL JSON file
-- Ensures perfect compatibility with the deployed program
-- No guesswork on instruction hashes
+The Todo Program is a Solana smart contract that manages a simple todo list with the following constraints:
+- **Single PDA per user**: All todos are stored in one account
+- **Maximum 10 todos**: Limited by on-chain storage constraints
+- **Title limit**: 50 characters maximum
+- **Description limit**: 200 characters maximum
 
-### ✅ **Type Safety & Validation**
-- Uses strongly-typed instruction structs based on IDL specification
-- Compile-time validation of instruction parameters
-- Proper serialization/deserialization handling
+## Architecture
 
-### ✅ **Maintainability**
-- When the program changes, extract new discriminators from regenerated IDL
-- Instruction structures mirror the IDL specification exactly
-- Self-documenting code through IDL-derived types
-
-### ✅ **Accurate Integration**
-- Uses exact discriminators from deployed program: `[110, 156, 253, 119, 218, 241, 220, 171]`
-- Proper account metadata handling
-- Compatible with anchor-client API
+The program uses a single Program Derived Address (PDA) pattern:
+- **Seed**: `TODO_ACC` + user's public key
+- **Account**: `TodoState` containing all user's todos
 
 ## Features
 
-- **IDL-derived**: Uses discriminators extracted from IDL for perfect compatibility
-- **10MB Storage**: Supports todo items with up to ~10MB of description data
-- **Complete CRUD**: Create, Read, Update, Delete operations
-- **PDA Management**: Automatic Program Derived Address handling
-- **Error Handling**: Comprehensive error messages and validation
+- Initialize a personal todo list account
+- Add new todos with title and description
+- Update todo completion status
+- Remove todos by index
+- List all todos
+- Get specific todo details
 
-## Setup
-
-### Prerequisites
-1. Solana program deployed and IDL generated
-2. Valid Solana wallet keypair
-3. RPC connection to Solana cluster
+## Usage
 
 ### Build
+
 ```bash
 cargo build --release
 ```
 
-## Usage
-
-### Basic Commands
+### Commands
 
 #### Initialize Todo List
+Creates a new todo list account for the user.
+
 ```bash
 cargo run -- init
 ```
 
 #### Create Todo
+Adds a new todo item to your list.
+
 ```bash
-cargo run -- create --title "Learn Solana" --description "Study Anchor framework and PDA patterns"
+cargo run -- create -t "Buy groceries" -d "Milk, eggs, bread, and vegetables"
 ```
 
-#### List All Todos
+#### List Todos
+Displays all todos in your list.
+
 ```bash
 cargo run -- list
 ```
 
-#### Get Specific Todo
-```bash
-cargo run -- get --id 0
+Output:
+```
+Todo List:
+[0] Buy groceries | Milk, eggs, bread, and vegetables - ☐
+[1] Finish report | Complete quarterly report by Friday - ☐
+[2] Exercise | 30 minutes of jogging - ✓
 ```
 
 #### Update Todo
-```bash
-# Update title and mark as completed
-cargo run -- update --id 0 --title "Learn Solana ✅" --completed true
+Marks a todo as completed or uncompleted.
 
-# Update just description
-cargo run -- update --id 0 --description "Completed Anchor tutorial and built todo app"
+```bash
+# Mark todo at index 0 as completed
+cargo run -- update -i 0 -c true
+
+# Mark todo at index 0 as not completed
+cargo run -- update -i 0 -c false
 ```
 
 #### Delete Todo
+Removes a todo from the list by index.
+
 ```bash
-cargo run -- delete --id 0
+cargo run -- delete -i 1
 ```
 
-### Advanced Options
+#### Get Todo Details
+Displays detailed information about a specific todo.
 
-#### Custom Configuration
 ```bash
-# Use custom RPC endpoint
-cargo run -- --url https://api.devnet.solana.com create --title "Test" --description "Testing on devnet"
-
-# Use custom keypair
-cargo run -- --keypair ./my-wallet.json list
-
-# Use custom program ID
-cargo run -- --program-id "YOUR_PROGRAM_ID" init
-
-# Use custom IDL file
-cargo run -- --idl-path ./custom-idl.json list
+cargo run -- get -i 0
 ```
 
-#### Large Data Example
-```bash
-# Create todo with large description (up to ~10MB)
-cargo run -- create --title "Documentation" --description "$(cat large-document.txt)"
+Output:
+```
+Todo Item [0]:
+  Title: Buy groceries
+  Description: Milk, eggs, bread, and vegetables
+  Completed: No
 ```
 
-## Configuration Options
+### Configuration Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--keypair, -k` | `~/.config/solana/id.json` | Path to wallet keypair |
-| `--url, -u` | `http://localhost:8899` | Solana RPC URL |
-| `--program-id, -p` | `E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB` | Program ID |
-| `--idl-path` | `./pda_limitation.json` | Path to IDL JSON file |
+- `--keypair`: Path to Solana keypair file (default: `~/.config/solana/id.json`)
+- `--url`: RPC URL (default: `http://localhost:8899`)
+- `--program-id`: Program ID (default: `6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL`)
 
-## Architecture
+### Example with Custom Configuration
 
-### IDL Integration
+```bash
+cargo run -- --keypair ~/my-wallet.json --url https://api.devnet.solana.com create -t "Test" -d "Testing on devnet"
+```
+
+## Error Handling
+
+The program includes comprehensive error handling for:
+- `TitleTooLong`: Title exceeds 50 characters
+- `DescriptionTooLong`: Description exceeds 200 characters
+- `MaxTodosReached`: Attempting to add more than 10 todos
+- `InvalidTodoIndex`: Accessing a todo that doesn't exist
+
+## Technical Details
+
+### IDL Structure
+The client reads the `pda_limitation.json` IDL file to understand:
+- Instruction discriminators
+- Account structures
+- Argument types
+- Error codes
+
+### Account Structure
 ```rust
-// Load IDL from JSON file
-let idl: serde_json::Value = serde_json::from_str(&idl_data)?;
+TodoState {
+    key: Pubkey,           // User's public key
+    bump: u8,              // PDA bump seed
+    todos: Vec<Todo>,      // List of todos (max 10)
+    total_todos: u64,      // Total number of todos created
+}
 
-// Create program with IDL
-let program = client.program_with_idl(program_id, &idl)?;
-
-// Use named instructions
-let tx = program
-  .request()
-  .instruction("create_todo")  // ← IDL-based instruction name
-  .accounts(...)               // ← Named account mapping
-  .args((title, description))  // ← Type-safe arguments
-  .send()?;
+Todo {
+    title: String,         // Max 50 characters
+    description: String,   // Max 200 characters
+    is_completed: bool,    // Completion status
+}
 ```
-
-### Account Management
-- **TodoList PDA**: `seeds = ["todo_list", user_pubkey]`
-- **TodoItem PDA**: `seeds = ["todo_item", user_pubkey, todo_id]`
-- **Storage**: Each todo item allocated up to 10MB space
-
-### Error Handling
-The IDL includes comprehensive error definitions:
-- `TitleTooLong`: Title exceeds 100 characters
-- `DescriptionTooLong`: Description exceeds ~10MB
-- `Unauthorized`: User doesn't own the todo item
 
 ## Development
 
-### Regenerating IDL
-When the Anchor program changes:
-```bash
-# In the main project directory
-anchor build
-cp target/idl/pda_limitation.json todo_client_idl/
-```
+This client demonstrates:
+- IDL-based program interaction
+- PDA derivation and account management
+- Instruction construction and sending
+- Account deserialization
+- Error handling and user feedback
 
-The client will automatically adapt to program changes through the updated IDL.
+## Dependencies
 
-### Testing
-```bash
-# Check compilation
-cargo check
-
-# Run with debug logging
-RUST_LOG=debug cargo run -- list
-```
-
-## Comparison with Manual Client
-
-| Aspect | Manual Client | IDL Client |
-|--------|---------------|------------|
-| **Setup Complexity** | High - manual discriminators | Low - automatic from IDL |
-| **Maintenance** | High - manual updates needed | Low - IDL regeneration |
-| **Type Safety** | Manual validation | Automatic validation |
-| **Error Prone** | Yes - manual serialization | No - Anchor handles it |
-| **Documentation** | Manual | Self-documenting |
-
-The IDL-based approach is significantly more maintainable and less error-prone, making it the recommended approach for production applications.
+- `anchor-lang`: Anchor framework
+- `solana-sdk`: Solana SDK
+- `serde_json`: JSON parsing for IDL
+- `clap`: Command-line argument parsing
+- `shellexpand`: Path expansion

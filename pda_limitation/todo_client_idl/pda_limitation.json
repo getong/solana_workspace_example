@@ -1,5 +1,5 @@
 {
-  "address": "E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB",
+  "address": "6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL",
   "metadata": {
     "name": "pda_limitation",
     "version": "0.1.0",
@@ -8,83 +8,47 @@
   },
   "instructions": [
     {
-      "name": "create_todo",
+      "name": "add_todo",
       "discriminator": [
-        250,
-        161,
-        142,
-        148,
-        131,
-        48,
-        194,
-        181
+        188,
+        16,
+        45,
+        145,
+        4,
+        5,
+        188,
+        75
       ],
       "accounts": [
         {
-          "name": "todo_item",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  111,
-                  100,
-                  111,
-                  95,
-                  105,
-                  116,
-                  101,
-                  109
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              },
-              {
-                "kind": "account",
-                "path": "todo_list.todo_count",
-                "account": "TodoList"
-              }
-            ]
-          }
-        },
-        {
-          "name": "todo_list",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  111,
-                  100,
-                  111,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              }
-            ]
-          }
-        },
-        {
-          "name": "user",
+          "name": "signer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
+          "name": "todo_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  84,
+                  79,
+                  68,
+                  79,
+                  95,
+                  65,
+                  67,
+                  67
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -99,105 +63,47 @@
       ]
     },
     {
-      "name": "delete_todo",
+      "name": "initialize_pda",
       "discriminator": [
-        224,
+        178,
+        254,
+        136,
         212,
-        234,
-        177,
-        90,
-        57,
-        219,
-        115
+        127,
+        85,
+        171,
+        210
       ],
       "accounts": [
         {
-          "name": "todo_item",
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "todo_account",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  116,
-                  111,
-                  100,
-                  111,
+                  84,
+                  79,
+                  68,
+                  79,
                   95,
-                  105,
-                  116,
-                  101,
-                  109
+                  65,
+                  67,
+                  67
                 ]
               },
               {
                 "kind": "account",
-                "path": "user"
-              },
-              {
-                "kind": "arg",
-                "path": "todo_id"
+                "path": "signer"
               }
             ]
           }
-        },
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "owner",
-          "relations": [
-            "todo_item"
-          ]
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "initialize_todo_list",
-      "discriminator": [
-        110,
-        156,
-        253,
-        119,
-        218,
-        241,
-        220,
-        171
-      ],
-      "accounts": [
-        {
-          "name": "todo_list",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  111,
-                  100,
-                  111,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              }
-            ]
-          }
-        },
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
         },
         {
           "name": "system_program",
@@ -205,6 +111,57 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "remove_todo",
+      "discriminator": [
+        28,
+        167,
+        91,
+        69,
+        25,
+        225,
+        253,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "todo_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  84,
+                  79,
+                  68,
+                  79,
+                  95,
+                  65,
+                  67,
+                  67
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "update_todo",
@@ -220,94 +177,60 @@
       ],
       "accounts": [
         {
-          "name": "todo_item",
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "todo_account",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  116,
-                  111,
-                  100,
-                  111,
+                  84,
+                  79,
+                  68,
+                  79,
                   95,
-                  105,
-                  116,
-                  101,
-                  109
+                  65,
+                  67,
+                  67
                 ]
               },
               {
                 "kind": "account",
-                "path": "user"
-              },
-              {
-                "kind": "arg",
-                "path": "todo_id"
+                "path": "signer"
               }
             ]
           }
-        },
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "owner",
-          "relations": [
-            "todo_item"
-          ]
         }
       ],
       "args": [
         {
-          "name": "title",
-          "type": {
-            "option": "string"
-          }
+          "name": "index",
+          "type": "u64"
         },
         {
-          "name": "description",
-          "type": {
-            "option": "string"
-          }
-        },
-        {
-          "name": "completed",
-          "type": {
-            "option": "bool"
-          }
+          "name": "is_completed",
+          "type": "bool"
         }
       ]
     }
   ],
   "accounts": [
     {
-      "name": "TodoItem",
+      "name": "TodoState",
       "discriminator": [
-        165,
-        128,
-        132,
-        139,
-        204,
-        211,
-        132,
-        83
-      ]
-    },
-    {
-      "name": "TodoList",
-      "discriminator": [
-        237,
-        16,
-        56,
-        14,
+        232,
+        39,
+        87,
+        92,
         45,
-        138,
-        67,
-        245
+        186,
+        14,
+        13
       ]
     }
   ],
@@ -315,33 +238,30 @@
     {
       "code": 6000,
       "name": "TitleTooLong",
-      "msg": "Title is too long. Maximum 100 characters."
+      "msg": "Title is too long. Maximum 50 characters."
     },
     {
       "code": 6001,
       "name": "DescriptionTooLong",
-      "msg": "Description is too long. Maximum size is approximately 10MB."
+      "msg": "Description is too long. Maximum 200 characters."
     },
     {
       "code": 6002,
-      "name": "Unauthorized",
-      "msg": "You are not authorized to perform this action."
+      "name": "MaxTodosReached",
+      "msg": "Maximum number of todos (10) reached."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidTodoIndex",
+      "msg": "Invalid todo index."
     }
   ],
   "types": [
     {
-      "name": "TodoItem",
+      "name": "Todo",
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
-          {
-            "name": "id",
-            "type": "u64"
-          },
           {
             "name": "title",
             "type": "string"
@@ -351,27 +271,37 @@
             "type": "string"
           },
           {
-            "name": "completed",
+            "name": "is_completed",
             "type": "bool"
-          },
-          {
-            "name": "created_at",
-            "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "TodoList",
+      "name": "TodoState",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "owner",
+            "name": "key",
             "type": "pubkey"
           },
           {
-            "name": "todo_count",
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "todos",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Todo"
+                }
+              }
+            }
+          },
+          {
+            "name": "total_todos",
             "type": "u64"
           }
         ]

@@ -3,6 +3,14 @@ name = "todo_client_idl"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "todo_client_idl"
+path = "src/main.rs"
+
+[[bin]]
+name = "todo_client_raw"
+path = "src/main_raw.rs"
+
 [dependencies]
 anchor-client = "0.31.1"
 anyhow = "1.0"
