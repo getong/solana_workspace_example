@@ -1,7 +1,8 @@
 [workspace]
 members = [
   "programs/*",
-  "todo_client"
+  "todo_client",
+  "todo_client_idl"
 ]
 resolver = "2"
 

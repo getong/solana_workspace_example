@@ -1,0 +1,381 @@
+{
+  "address": "E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB",
+  "metadata": {
+    "name": "pda_limitation",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "create_todo",
+      "discriminator": [
+        250,
+        161,
+        142,
+        148,
+        131,
+        48,
+        194,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "todo_item",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  100,
+                  111,
+                  95,
+                  105,
+                  116,
+                  101,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "account",
+                "path": "todo_list.todo_count",
+                "account": "TodoList"
+              }
+            ]
+          }
+        },
+        {
+          "name": "todo_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  100,
+                  111,
+                  95,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "delete_todo",
+      "discriminator": [
+        224,
+        212,
+        234,
+        177,
+        90,
+        57,
+        219,
+        115
+      ],
+      "accounts": [
+        {
+          "name": "todo_item",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  100,
+                  111,
+                  95,
+                  105,
+                  116,
+                  101,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "arg",
+                "path": "todo_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "relations": [
+            "todo_item"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_todo_list",
+      "discriminator": [
+        110,
+        156,
+        253,
+        119,
+        218,
+        241,
+        220,
+        171
+      ],
+      "accounts": [
+        {
+          "name": "todo_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  100,
+                  111,
+                  95,
+                  108,
+                  105,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_todo",
+      "discriminator": [
+        105,
+        8,
+        31,
+        183,
+        159,
+        73,
+        203,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "todo_item",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  100,
+                  111,
+                  95,
+                  105,
+                  116,
+                  101,
+                  109
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "arg",
+                "path": "todo_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "relations": [
+            "todo_item"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "description",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "completed",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "TodoItem",
+      "discriminator": [
+        165,
+        128,
+        132,
+        139,
+        204,
+        211,
+        132,
+        83
+      ]
+    },
+    {
+      "name": "TodoList",
+      "discriminator": [
+        237,
+        16,
+        56,
+        14,
+        45,
+        138,
+        67,
+        245
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "TitleTooLong",
+      "msg": "Title is too long. Maximum 100 characters."
+    },
+    {
+      "code": 6001,
+      "name": "DescriptionTooLong",
+      "msg": "Description is too long. Maximum size is approximately 10MB."
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorized",
+      "msg": "You are not authorized to perform this action."
+    }
+  ],
+  "types": [
+    {
+      "name": "TodoItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "completed",
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TodoList",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "todo_count",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}
