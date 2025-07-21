@@ -151,6 +151,19 @@ This client demonstrates:
 - Account deserialization
 - Error handling and user feedback
 
+## cli example
+
+``` shell
+# Initialize
+cargo run --bin todo_client_raw -- --keypair ~/solana-wallets/alice.json init
+
+# Create a todo
+cargo run --bin todo_client_raw -- --keypair ~/solana-wallets/alice.json create -t "New task" -d "Task description"
+
+# List todos
+cargo run --bin todo_client_raw -- --keypair ~/solana-wallets/alice.json list
+```
+
 ## Dependencies
 
 - `anchor-lang`: Anchor framework
