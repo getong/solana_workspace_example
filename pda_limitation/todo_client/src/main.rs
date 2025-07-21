@@ -15,8 +15,7 @@ use clap::{Parser, Subcommand};
 use solana_sdk::signature::read_keypair_file;
 use solana_system_interface::program as system_program;
 
-const TODO_LIST_SEED: &[u8] = b"todo_list";
-const TODO_ITEM_SEED: &[u8] = b"todo_item";
+const TODO_LIST_SEED: &[u8] = b"TODO_ACC";
 
 #[derive(Parser)]
 #[command(name = "todo-client")]
@@ -34,7 +33,7 @@ struct Cli {
   #[arg(
     short,
     long,
-    default_value = "E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB"
+    default_value = "9oFMiFWGhKmuXN4wVhhFRGZVQpgcBjoHoPEBTDaxMGRA"
   )]
   program_id: String,
 }
@@ -70,22 +69,24 @@ enum Commands {
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize)]
-struct TodoList {
-  owner: Pubkey,
-  todo_count: u64,
+struct TodoState {
+  key: Pubkey,
+  bump: u8,
+  todos: Vec<Todo>,
+  total_todos: u64,
+}
+
+impl Discriminator for TodoState {
+  const DISCRIMINATOR: &'static [u8] = &[232, 39, 87, 92, 45, 186, 14, 13];
 }
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize)]
-struct TodoItem {
-  owner: Pubkey,
-  id: u64,
-  title: String,
+struct Todo {
   description: String,
-  completed: bool,
-  created_at: i64,
+  is_completed: bool,
 }
 
-impl AccountDeserialize for TodoList {
+impl AccountDeserialize for TodoState {
   fn try_deserialize_unchecked(
     buf: &mut &[u8],
   ) -> Result<Self, anchor_client::anchor_lang::error::Error> {
@@ -97,7 +98,7 @@ impl AccountDeserialize for TodoList {
   }
 }
 
-impl AccountDeserialize for TodoItem {
+impl AccountDeserialize for Todo {
   fn try_deserialize_unchecked(
     buf: &mut &[u8],
   ) -> Result<Self, anchor_client::anchor_lang::error::Error> {
@@ -111,31 +112,29 @@ impl AccountDeserialize for TodoItem {
 
 // Instruction structs with discriminators
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct InitializeTodoListInstruction {}
+pub struct InitializePdaInstruction {}
 
-impl Discriminator for InitializeTodoListInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[110, 156, 253, 119, 218, 241, 220, 171];
+impl Discriminator for InitializePdaInstruction {
+  const DISCRIMINATOR: &'static [u8] = &[178, 254, 136, 212, 127, 85, 171, 210];
 }
 
-impl InstructionData for InitializeTodoListInstruction {}
+impl InstructionData for InitializePdaInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct CreateTodoInstruction {
-  pub title: String,
+pub struct AddTodoInstruction {
   pub description: String,
 }
 
-impl Discriminator for CreateTodoInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[250, 161, 142, 148, 131, 48, 194, 181];
+impl Discriminator for AddTodoInstruction {
+  const DISCRIMINATOR: &'static [u8] = &[188, 16, 45, 145, 4, 5, 188, 75];
 }
 
-impl InstructionData for CreateTodoInstruction {}
+impl InstructionData for AddTodoInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct UpdateTodoInstruction {
-  pub title: Option<String>,
-  pub description: Option<String>,
-  pub completed: Option<bool>,
+  pub index: u64,
+  pub is_completed: bool,
 }
 
 impl Discriminator for UpdateTodoInstruction {
@@ -145,13 +144,15 @@ impl Discriminator for UpdateTodoInstruction {
 impl InstructionData for UpdateTodoInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct DeleteTodoInstruction {}
-
-impl Discriminator for DeleteTodoInstruction {
-  const DISCRIMINATOR: &'static [u8] = &[224, 212, 234, 177, 90, 57, 219, 115];
+pub struct RemoveTodoInstruction {
+  pub index: u64,
 }
 
-impl InstructionData for DeleteTodoInstruction {}
+impl Discriminator for RemoveTodoInstruction {
+  const DISCRIMINATOR: &'static [u8] = &[28, 167, 91, 69, 25, 225, 253, 117];
+}
+
+impl InstructionData for RemoveTodoInstruction {}
 
 struct TodoClient {
   program: Program<Rc<Keypair>>,
@@ -185,24 +186,13 @@ impl TodoClient {
     )
   }
 
-  fn get_todo_item_pda(&self, todo_id: u64) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-      &[
-        TODO_ITEM_SEED,
-        self.payer.pubkey().as_ref(),
-        &todo_id.to_le_bytes(),
-      ],
-      &self.program.id(),
-    )
-  }
-
   fn initialize_todo_list(&self) -> Result<String> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
     println!("Todo list PDA: {}", todo_list_pda);
 
     let accounts = vec![
-      AccountMeta::new(todo_list_pda, false),
       AccountMeta::new(self.payer.pubkey(), true),
+      AccountMeta::new(todo_list_pda, false),
       AccountMeta::new_readonly(system_program::id(), false),
     ];
 
@@ -210,35 +200,26 @@ impl TodoClient {
       .program
       .request()
       .accounts(accounts)
-      .args(InitializeTodoListInstruction {})
+      .args(InitializePdaInstruction {})
       .signer(&*self.payer)
       .send()?;
 
     Ok(tx.to_string())
   }
 
-  fn create_todo(&self, title: String, description: String) -> Result<String> {
+  fn create_todo(&self, _title: String, description: String) -> Result<String> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
 
-    // Fetch current todo count
-    let todo_list_account = self.program.account::<TodoList>(todo_list_pda)?;
-    let (todo_item_pda, _) = self.get_todo_item_pda(todo_list_account.todo_count);
-    
-    println!("Creating todo with ID: {}", todo_list_account.todo_count);
-    println!("Todo item PDA: {}", todo_item_pda);
-
     let accounts = vec![
-      AccountMeta::new(todo_item_pda, false),
-      AccountMeta::new(todo_list_pda, false),
       AccountMeta::new(self.payer.pubkey(), true),
-      AccountMeta::new_readonly(system_program::id(), false),
+      AccountMeta::new(todo_list_pda, false),
     ];
 
     let tx = self
       .program
       .request()
       .accounts(accounts)
-      .args(CreateTodoInstruction { title, description })
+      .args(AddTodoInstruction { description })
       .signer(&*self.payer)
       .send()?;
 
@@ -248,16 +229,16 @@ impl TodoClient {
   fn update_todo(
     &self,
     todo_id: u64,
-    title: Option<String>,
-    description: Option<String>,
+    _title: Option<String>,
+    _description: Option<String>,
     completed: Option<bool>,
   ) -> Result<String> {
-    let (todo_item_pda, _) = self.get_todo_item_pda(todo_id);
+    let (todo_list_pda, _) = self.get_todo_list_pda();
+    let is_completed = completed.unwrap_or(false);
 
     let accounts = vec![
-      AccountMeta::new(todo_item_pda, false),
       AccountMeta::new(self.payer.pubkey(), true),
-      AccountMeta::new_readonly(self.payer.pubkey(), false),
+      AccountMeta::new(todo_list_pda, false),
     ];
 
     let tx = self
@@ -265,9 +246,8 @@ impl TodoClient {
       .request()
       .accounts(accounts)
       .args(UpdateTodoInstruction {
-        title,
-        description,
-        completed,
+        index: todo_id,
+        is_completed,
       })
       .signer(&*self.payer)
       .send()?;
@@ -276,55 +256,48 @@ impl TodoClient {
   }
 
   fn delete_todo(&self, todo_id: u64) -> Result<String> {
-    let (todo_item_pda, _) = self.get_todo_item_pda(todo_id);
+    let (todo_list_pda, _) = self.get_todo_list_pda();
 
     let accounts = vec![
-      AccountMeta::new(todo_item_pda, false),
       AccountMeta::new(self.payer.pubkey(), true),
-      AccountMeta::new_readonly(self.payer.pubkey(), false),
+      AccountMeta::new(todo_list_pda, false),
     ];
 
     let tx = self
       .program
       .request()
       .accounts(accounts)
-      .args(DeleteTodoInstruction {})
+      .args(RemoveTodoInstruction { index: todo_id })
       .signer(&*self.payer)
       .send()?;
 
     Ok(tx.to_string())
   }
 
-  fn get_todo_list(&self) -> Result<TodoList> {
+  fn get_todo_list(&self) -> Result<TodoState> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
-    let account = self.program.account::<TodoList>(todo_list_pda)?;
+
+    // Debug: Let's check the raw account data
+    let account_info = self.program.rpc().get_account(&todo_list_pda)?;
+    println!("Account data length: {}", account_info.data.len());
+    println!(
+      "First 16 bytes: {:?}",
+      &account_info.data[.. 16.min(account_info.data.len())]
+    );
+
+    let account = self.program.account::<TodoState>(todo_list_pda)?;
     Ok(account)
   }
 
-  fn get_todo_item(&self, todo_id: u64) -> Result<TodoItem> {
-    let (todo_item_pda, _) = self.get_todo_item_pda(todo_id);
-    let account = self.program.account::<TodoItem>(todo_item_pda)?;
-    Ok(account)
-  }
-
-  fn list_todos(&self) -> Result<Vec<TodoItem>> {
-    let todo_list = self.get_todo_list()?;
-    let mut todos = Vec::new();
-
-    for i in 0 .. todo_list.todo_count {
-      match self.get_todo_item(i) {
-        Ok(todo) => todos.push(todo),
-        Err(_) => continue, // Skip deleted todos
-      }
-    }
-
-    Ok(todos)
+  fn list_todos(&self) -> Result<Vec<Todo>> {
+    let todo_state = self.get_todo_list()?;
+    Ok(todo_state.todos)
   }
 }
 
 fn main() -> Result<()> {
   let cli = Cli::parse();
-  
+
   let client = TodoClient::new(&cli.url, &cli.keypair, &cli.program_id)?;
 
   match cli.command {
@@ -342,8 +315,7 @@ fn main() -> Result<()> {
       description,
       completed,
     } => {
-      let tx = client
-        .update_todo(id, title, description, completed)?;
+      let tx = client.update_todo(id, title, description, completed)?;
       println!("Todo updated. Transaction: {}", tx);
     }
     Commands::Delete { id } => {
@@ -356,31 +328,26 @@ fn main() -> Result<()> {
         println!("No todos found.");
       } else {
         println!("Todo List:");
-        for todo in todos {
+        for (index, todo) in todos.iter().enumerate() {
           println!(
-            "ID: {}, Title: {}, Completed: {}, Created: {}",
-            todo.id, todo.title, todo.completed, todo.created_at
+            "[{}] {} - {}",
+            index,
+            todo.description,
+            if todo.is_completed { "✓" } else { "☐" }
           );
-          if !todo.description.is_empty() {
-            println!("  Description: {}", todo.description);
-          }
-          println!();
         }
       }
     }
-    Commands::Get { id } => match client.get_todo_item(id) {
-      Ok(todo) => {
-        println!("Todo Item:");
-        println!("  ID: {}", todo.id);
-        println!("  Title: {}", todo.title);
+    Commands::Get { id } => {
+      let todos = client.list_todos()?;
+      if let Some(todo) = todos.get(id as usize) {
+        println!("Todo Item [{}]:", id);
         println!("  Description: {}", todo.description);
-        println!("  Completed: {}", todo.completed);
-        println!("  Created: {}", todo.created_at);
+        println!("  Completed: {}", todo.is_completed);
+      } else {
+        println!("Todo with index {} not found", id);
       }
-      Err(e) => {
-        println!("Todo with ID {} not found: {}", id, e);
-      }
-    },
+    }
   }
 
   Ok(())

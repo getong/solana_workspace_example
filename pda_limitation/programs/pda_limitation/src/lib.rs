@@ -1,168 +1,76 @@
 use anchor_lang::prelude::*;
 
-declare_id!("E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB");
+pub mod contexts;
+use contexts::*;
 
-const TODO_LIST_SEED: &[u8] = b"todo_list";
-const TODO_ITEM_SEED: &[u8] = b"todo_item";
-const MAX_TODO_SIZE: usize = 10 * 1024 * 1024; // 10MB
+declare_id!("9oFMiFWGhKmuXN4wVhhFRGZVQpgcBjoHoPEBTDaxMGRA");
 
 #[program]
 pub mod pda_limitation {
   use super::*;
 
-  pub fn initialize_todo_list(ctx: Context<InitializeTodoList>) -> Result<()> {
-    let todo_list = &mut ctx.accounts.todo_list;
-    todo_list.owner = ctx.accounts.user.key();
-    todo_list.todo_count = 0;
+  pub fn initialize_pda(ctx: Context<InitializaPda>) -> Result<()> {
+    let todo_account = &mut ctx.accounts.todo_account;
+    todo_account.key = ctx.accounts.signer.key();
+    todo_account.bump = ctx.bumps.todo_account;
+    todo_account.todos = Vec::new();
+    todo_account.total_todos = 0;
     Ok(())
   }
 
-  pub fn create_todo(ctx: Context<CreateTodo>, title: String, description: String) -> Result<()> {
-    require!(title.len() <= 100, TodoError::TitleTooLong);
+  pub fn add_todo(ctx: Context<AddTodo>, description: String) -> Result<()> {
+    require!(description.len() <= 50, TodoError::DescriptionTooLong);
     require!(
-      description.len() <= MAX_TODO_SIZE - 200,
-      TodoError::DescriptionTooLong
+      ctx.accounts.todo_account.todos.len() < 10,
+      TodoError::MaxTodosReached
     );
 
-    let todo_item = &mut ctx.accounts.todo_item;
-    let todo_list = &mut ctx.accounts.todo_list;
+    let todo_account = &mut ctx.accounts.todo_account;
 
-    todo_item.owner = ctx.accounts.user.key();
-    todo_item.id = todo_list.todo_count;
-    todo_item.title = title;
-    todo_item.description = description;
-    todo_item.completed = false;
-    todo_item.created_at = Clock::get()?.unix_timestamp;
+    let new_todo = Todo {
+      description,
+      is_completed: false,
+    };
 
-    todo_list.todo_count += 1;
+    todo_account.todos.push(new_todo);
+    todo_account.total_todos += 1;
 
     Ok(())
   }
 
-  pub fn update_todo(
-    ctx: Context<UpdateTodo>,
-    title: Option<String>,
-    description: Option<String>,
-    completed: Option<bool>,
-  ) -> Result<()> {
-    let todo_item = &mut ctx.accounts.todo_item;
+  pub fn update_todo(ctx: Context<UpdateTodo>, index: u64, is_completed: bool) -> Result<()> {
+    let todo_account = &mut ctx.accounts.todo_account;
 
-    if let Some(new_title) = title {
-      require!(new_title.len() <= 100, TodoError::TitleTooLong);
-      todo_item.title = new_title;
-    }
+    require!(
+      (index as usize) < todo_account.todos.len(),
+      TodoError::InvalidTodoIndex
+    );
 
-    if let Some(new_description) = description {
-      require!(
-        new_description.len() <= MAX_TODO_SIZE - 200,
-        TodoError::DescriptionTooLong
-      );
-      todo_item.description = new_description;
-    }
-
-    if let Some(is_completed) = completed {
-      todo_item.completed = is_completed;
-    }
+    todo_account.todos[index as usize].is_completed = is_completed;
 
     Ok(())
   }
 
-  pub fn delete_todo(ctx: Context<DeleteTodo>) -> Result<()> {
+  pub fn remove_todo(ctx: Context<UpdateTodo>, index: u64) -> Result<()> {
+    let todo_account = &mut ctx.accounts.todo_account;
+
+    require!(
+      (index as usize) < todo_account.todos.len(),
+      TodoError::InvalidTodoIndex
+    );
+
+    todo_account.todos.remove(index as usize);
+
     Ok(())
   }
-}
-
-#[account]
-pub struct TodoList {
-  pub owner: Pubkey,
-  pub todo_count: u64,
-}
-
-#[account]
-pub struct TodoItem {
-  pub owner: Pubkey,
-  pub id: u64,
-  pub title: String,
-  pub description: String,
-  pub completed: bool,
-  pub created_at: i64,
-}
-
-#[derive(Accounts)]
-pub struct InitializeTodoList<'info> {
-  #[account(
-        init,
-        payer = user,
-        space = 8 + 32 + 8,
-        seeds = [TODO_LIST_SEED, user.key().as_ref()],
-        bump
-    )]
-  pub todo_list: Account<'info, TodoList>,
-  #[account(mut)]
-  pub user: Signer<'info>,
-  pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct CreateTodo<'info> {
-  #[account(
-        init,
-        payer = user,
-        space = 8 + 32 + 8 + 104 + MAX_TODO_SIZE + 1 + 8,
-        seeds = [TODO_ITEM_SEED, user.key().as_ref(), &todo_list.todo_count.to_le_bytes()],
-        bump
-    )]
-  pub todo_item: Account<'info, TodoItem>,
-  #[account(
-        mut,
-        seeds = [TODO_LIST_SEED, user.key().as_ref()],
-        bump
-    )]
-  pub todo_list: Account<'info, TodoList>,
-  #[account(mut)]
-  pub user: Signer<'info>,
-  pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(todo_id: u64)]
-pub struct UpdateTodo<'info> {
-  #[account(
-        mut,
-        seeds = [TODO_ITEM_SEED, user.key().as_ref(), &todo_id.to_le_bytes()],
-        bump,
-        has_one = owner @ TodoError::Unauthorized
-    )]
-  pub todo_item: Account<'info, TodoItem>,
-  #[account(mut)]
-  pub user: Signer<'info>,
-  /// CHECK: This is safe as we're only using it for seed derivation
-  pub owner: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(todo_id: u64)]
-pub struct DeleteTodo<'info> {
-  #[account(
-        mut,
-        close = user,
-        seeds = [TODO_ITEM_SEED, user.key().as_ref(), &todo_id.to_le_bytes()],
-        bump,
-        has_one = owner @ TodoError::Unauthorized
-    )]
-  pub todo_item: Account<'info, TodoItem>,
-  #[account(mut)]
-  pub user: Signer<'info>,
-  /// CHECK: This is safe as we're only using it for seed derivation
-  pub owner: AccountInfo<'info>,
 }
 
 #[error_code]
 pub enum TodoError {
-  #[msg("Title is too long. Maximum 100 characters.")]
-  TitleTooLong,
-  #[msg("Description is too long. Maximum size is approximately 10MB.")]
+  #[msg("Description is too long. Maximum 50 characters.")]
   DescriptionTooLong,
-  #[msg("You are not authorized to perform this action.")]
-  Unauthorized,
+  #[msg("Maximum number of todos (10) reached.")]
+  MaxTodosReached,
+  #[msg("Invalid todo index.")]
+  InvalidTodoIndex,
 }
