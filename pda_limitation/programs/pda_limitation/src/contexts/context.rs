@@ -13,6 +13,8 @@ pub struct TodoState {
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Debug, InitSpace)]
 pub struct Todo {
   #[max_len(50)]
+  pub title: String,
+  #[max_len(200)]
   pub description: String,
   pub is_completed: bool,
 }

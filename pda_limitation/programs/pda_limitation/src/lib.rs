@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 pub mod contexts;
 use contexts::*;
 
-declare_id!("9oFMiFWGhKmuXN4wVhhFRGZVQpgcBjoHoPEBTDaxMGRA");
+declare_id!("6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL");
 
 #[program]
 pub mod pda_limitation {
@@ -18,8 +18,9 @@ pub mod pda_limitation {
     Ok(())
   }
 
-  pub fn add_todo(ctx: Context<AddTodo>, description: String) -> Result<()> {
-    require!(description.len() <= 50, TodoError::DescriptionTooLong);
+  pub fn add_todo(ctx: Context<AddTodo>, title: String, description: String) -> Result<()> {
+    require!(title.len() <= 50, TodoError::TitleTooLong);
+    require!(description.len() <= 200, TodoError::DescriptionTooLong);
     require!(
       ctx.accounts.todo_account.todos.len() < 10,
       TodoError::MaxTodosReached
@@ -28,6 +29,7 @@ pub mod pda_limitation {
     let todo_account = &mut ctx.accounts.todo_account;
 
     let new_todo = Todo {
+      title,
       description,
       is_completed: false,
     };
@@ -67,7 +69,9 @@ pub mod pda_limitation {
 
 #[error_code]
 pub enum TodoError {
-  #[msg("Description is too long. Maximum 50 characters.")]
+  #[msg("Title is too long. Maximum 50 characters.")]
+  TitleTooLong,
+  #[msg("Description is too long. Maximum 200 characters.")]
   DescriptionTooLong,
   #[msg("Maximum number of todos (10) reached.")]
   MaxTodosReached,

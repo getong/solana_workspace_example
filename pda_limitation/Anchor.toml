@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-pda_limitation = "9oFMiFWGhKmuXN4wVhhFRGZVQpgcBjoHoPEBTDaxMGRA"
+pda_limitation = "6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL"
 
 [registry]
 url = "https://api.apr.dev"

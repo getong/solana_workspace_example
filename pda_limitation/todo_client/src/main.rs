@@ -34,7 +34,7 @@ struct Cli {
   #[arg(
     short,
     long,
-    default_value = "9oFMiFWGhKmuXN4wVhhFRGZVQpgcBjoHoPEBTDaxMGRA"
+    default_value = "6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL"
   )]
   program_id: String,
 }
@@ -83,6 +83,7 @@ impl Discriminator for TodoState {
 
 #[derive(Debug, AnchorSerialize, AnchorDeserialize)]
 struct Todo {
+  title: String,
   description: String,
   is_completed: bool,
 }
@@ -123,6 +124,7 @@ impl InstructionData for InitializePdaInstruction {}
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct AddTodoInstruction {
+  pub title: String,
   pub description: String,
 }
 
@@ -166,6 +168,7 @@ struct BorshTodoState {
 
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 struct BorshTodo {
+  title: String,
   description: String,
   is_completed: bool,
 }
@@ -223,7 +226,7 @@ impl TodoClient {
     Ok(tx.to_string())
   }
 
-  fn create_todo(&self, _title: String, description: String) -> Result<String> {
+  fn create_todo(&self, title: String, description: String) -> Result<String> {
     let (todo_list_pda, _) = self.get_todo_list_pda();
 
     let accounts = vec![
@@ -235,7 +238,7 @@ impl TodoClient {
       .program
       .request()
       .accounts(accounts)
-      .args(AddTodoInstruction { description })
+      .args(AddTodoInstruction { title, description })
       .signer(&*self.payer)
       .send()?;
 
@@ -317,8 +320,9 @@ impl TodoClient {
         println!("Todos count: {}", borsh_state.todos.len());
         for (i, todo) in borsh_state.todos.iter().enumerate() {
           println!(
-            "  Todo {}: {} - {}",
+            "  Todo {}: [{}] {} - {}",
             i,
+            todo.title,
             todo.description,
             if todo.is_completed { "✓" } else { "☐" }
           );
@@ -419,8 +423,9 @@ fn main() -> Result<()> {
         println!("Todo List:");
         for (index, todo) in todos.iter().enumerate() {
           println!(
-            "[{}] {} - {}",
+            "[{}] {} | {} - {}",
             index,
+            todo.title,
             todo.description,
             if todo.is_completed { "✓" } else { "☐" }
           );
@@ -431,6 +436,7 @@ fn main() -> Result<()> {
       let todos = client.list_todos()?;
       if let Some(todo) = todos.get(id as usize) {
         println!("Todo Item [{}]:", id);
+        println!("  Title: {}", todo.title);
         println!("  Description: {}", todo.description);
         println!("  Completed: {}", todo.is_completed);
       } else {
