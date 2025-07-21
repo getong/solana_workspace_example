@@ -24,3 +24,4 @@
 **/bun.lockb
 **/.DS_Store
 **/error.txt
+**/yarn.lock
