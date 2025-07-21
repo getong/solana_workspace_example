@@ -1,0 +1,111 @@
+* Todo Client
+:PROPERTIES:
+:CUSTOM_ID: todo-client
+:END:
+A Rust CLI client for interacting with the Solana Todo Program that
+supports PDAs with 10MB storage limitations.
+
+** Features
+:PROPERTIES:
+:CUSTOM_ID: features
+:END:
+- Initialize todo list
+- Create, Read, Update, Delete (CRUD) operations for todos
+- Support for large descriptions (up to ~10MB)
+- Command-line interface with easy-to-use commands
+
+** Usage
+:PROPERTIES:
+:CUSTOM_ID: usage
+:END:
+*** Build the client
+:PROPERTIES:
+:CUSTOM_ID: build-the-client
+:END:
+#+begin_src sh
+cargo build --release
+#+end_src
+
+*** Commands
+:PROPERTIES:
+:CUSTOM_ID: commands
+:END:
+**** Initialize Todo List
+:PROPERTIES:
+:CUSTOM_ID: initialize-todo-list
+:END:
+#+begin_src sh
+cargo run -- init
+#+end_src
+
+**** Create a Todo
+:PROPERTIES:
+:CUSTOM_ID: create-a-todo
+:END:
+#+begin_src sh
+cargo run -- create --title "My First Todo" --description "This is a detailed description"
+#+end_src
+
+**** List All Todos
+:PROPERTIES:
+:CUSTOM_ID: list-all-todos
+:END:
+#+begin_src sh
+cargo run -- list
+#+end_src
+
+**** Get Specific Todo
+:PROPERTIES:
+:CUSTOM_ID: get-specific-todo
+:END:
+#+begin_src sh
+cargo run -- get --id 0
+#+end_src
+
+**** Update a Todo
+:PROPERTIES:
+:CUSTOM_ID: update-a-todo
+:END:
+#+begin_src sh
+# Update title and mark as completed
+cargo run -- update --id 0 --title "Updated Title" --completed true
+
+# Update just the description
+cargo run -- update --id 0 --description "New description"
+#+end_src
+
+**** Delete a Todo
+:PROPERTIES:
+:CUSTOM_ID: delete-a-todo
+:END:
+#+begin_src sh
+cargo run -- delete --id 0
+#+end_src
+
+*** Options
+:PROPERTIES:
+:CUSTOM_ID: options
+:END:
+- =--keypair, -k=: Path to keypair file (default:
+  ~/.config/solana/id.json)
+- =--url, -u=: RPC URL (default: http://localhost:8899)
+- =--program-id, -p=: Program ID (default:
+  E5usXUWu4XR7rPJS6WLiYKWGj1BtUYLZL7TGc2mL78ZB)
+
+*** Example with custom options
+:PROPERTIES:
+:CUSTOM_ID: example-with-custom-options
+:END:
+#+begin_src sh
+cargo run -- --keypair ./my-keypair.json --url https://api.devnet.solana.com create --title "Test" --description "Test description"
+#+end_src
+
+** Program Details
+:PROPERTIES:
+:CUSTOM_ID: program-details
+:END:
+- Each todo item is stored in a separate PDA with up to 10MB storage
+  capacity
+- Todo items are identified by incremental IDs
+- Users can only modify their own todos
+- Deleted todos free up the storage space by closing the account
