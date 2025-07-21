@@ -281,12 +281,28 @@ impl TodoClient {
     let account_info = self.program.rpc().get_account(&todo_list_pda)?;
     println!("Account data length: {}", account_info.data.len());
     println!(
-      "First 16 bytes: {:?}",
-      &account_info.data[.. 16.min(account_info.data.len())]
+      "First 40 bytes: {:?}",
+      &account_info.data[.. 40.min(account_info.data.len())]
     );
 
-    let account = self.program.account::<TodoState>(todo_list_pda)?;
-    Ok(account)
+    // Try manual deserialization
+    let mut data = &account_info.data[8 ..]; // Skip discriminator
+    let result = TodoState::deserialize(&mut data);
+    match result {
+      Ok(state) => {
+        println!("Successfully deserialized!");
+        println!("Key: {}", state.key);
+        println!("Bump: {}", state.bump);
+        println!("Total todos: {}", state.total_todos);
+        println!("Todos count: {}", state.todos.len());
+        Ok(state)
+      }
+      Err(e) => {
+        println!("Deserialization error: {:?}", e);
+        let account = self.program.account::<TodoState>(todo_list_pda)?;
+        Ok(account)
+      }
+    }
   }
 
   fn list_todos(&self) -> Result<Vec<Todo>> {
