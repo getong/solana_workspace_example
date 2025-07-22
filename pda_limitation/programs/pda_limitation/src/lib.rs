@@ -9,6 +9,13 @@ declare_id!("6Cjd4PNSWMyFbsA2MTXtEkxhnAgWzjDQV969kFjQJukL");
 pub mod pda_limitation {
   use super::*;
 
+  pub fn initialize_global_counter(ctx: Context<InitializeGlobalCounter>) -> Result<()> {
+    let global_counter = &mut ctx.accounts.global_counter;
+    global_counter.bump = ctx.bumps.global_counter;
+    global_counter.total_todos = 0;
+    Ok(())
+  }
+
   pub fn initialize_pda(ctx: Context<InitializaPda>) -> Result<()> {
     let todo_account = &mut ctx.accounts.todo_account;
     todo_account.key = ctx.accounts.signer.key();
@@ -27,6 +34,7 @@ pub mod pda_limitation {
     );
 
     let todo_account = &mut ctx.accounts.todo_account;
+    let global_counter = &mut ctx.accounts.global_counter;
 
     let new_todo = Todo {
       title,
@@ -36,6 +44,9 @@ pub mod pda_limitation {
 
     todo_account.todos.push(new_todo);
     todo_account.total_todos += 1;
+
+    // Increment global counter
+    global_counter.total_todos += 1;
 
     Ok(())
   }
@@ -64,6 +75,10 @@ pub mod pda_limitation {
     todo_account.todos.remove(index as usize);
 
     Ok(())
+  }
+
+  pub fn get_global_todo_count(ctx: Context<GetGlobalCounter>) -> Result<u64> {
+    Ok(ctx.accounts.global_counter.total_todos)
   }
 }
 

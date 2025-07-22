@@ -7,166 +7,224 @@ describe("pda_limitation", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.pdaLimitation as Program<PdaLimitation>;
+  const program = anchor.workspace.PdaLimitation as Program<PdaLimitation>;
   const provider = anchor.getProvider();
   const user = (provider.wallet as anchor.Wallet).payer;
 
-  let todoListPda: anchor.web3.PublicKey;
-  let todoListBump: number;
+  let todoPda: anchor.web3.PublicKey;
+  let todoBump: number;
+  let globalCounterPda: anchor.web3.PublicKey;
+  let globalCounterBump: number;
 
   before(async () => {
-    [todoListPda, todoListBump] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("todo_list"), user.publicKey.toBuffer()],
+    [todoPda, todoBump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("TODO_ACC"), user.publicKey.toBuffer()],
+      program.programId
+    );
+
+    [globalCounterPda, globalCounterBump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("GLOBAL_TODO_COUNTER")],
       program.programId
     );
   });
 
-  it("Initialize todo list", async () => {
+  it("Initialize global counter", async () => {
     const tx = await program.methods
-      .initializeTodoList()
+      .initializeGlobalCounter()
       .accounts({
-        todoList: todoListPda,
-        user: user.publicKey,
+        signer: user.publicKey,
+        globalCounter: globalCounterPda,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user])
       .rpc();
 
-    console.log("Initialize todo list transaction signature", tx);
+    console.log("Initialize global counter transaction signature", tx);
 
-    const todoListAccount = await program.account.todoList.fetch(todoListPda);
-    expect(todoListAccount.owner.toString()).to.equal(user.publicKey.toString());
-    expect(todoListAccount.todoCount.toNumber()).to.equal(0);
+    const globalCounterAccount = await program.account.globalTodoCounter.fetch(globalCounterPda);
+    expect(globalCounterAccount.totalTodos.toNumber()).to.equal(0);
   });
 
-  it("Create a todo item", async () => {
+  it("Initialize user PDA", async () => {
+    const tx = await program.methods
+      .initializePda()
+      .accounts({
+        signer: user.publicKey,
+        todoAccount: todoPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Initialize PDA transaction signature", tx);
+
+    const todoAccount = await program.account.todoState.fetch(todoPda);
+    expect(todoAccount.key.toString()).to.equal(user.publicKey.toString());
+    expect(todoAccount.totalTodos.toNumber()).to.equal(0);
+    expect(todoAccount.todos.length).to.equal(0);
+  });
+
+  it("Add a todo", async () => {
     const title = "Test Todo";
     const description = "This is a test todo item";
 
-    const [todoItemPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("todo_item"),
-        user.publicKey.toBuffer(),
-        new anchor.BN(0).toArrayLike(Buffer, "le", 8)
-      ],
-      program.programId
-    );
-
     const tx = await program.methods
-      .createTodo(title, description)
+      .addTodo(title, description)
       .accounts({
-        todoItem: todoItemPda,
-        todoList: todoListPda,
-        user: user.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        signer: user.publicKey,
+        todoAccount: todoPda,
+        globalCounter: globalCounterPda,
       })
       .signers([user])
       .rpc();
 
-    console.log("Create todo transaction signature", tx);
+    console.log("Add todo transaction signature", tx);
 
-    const todoItemAccount = await program.account.todoItem.fetch(todoItemPda);
-    expect(todoItemAccount.title).to.equal(title);
-    expect(todoItemAccount.description).to.equal(description);
-    expect(todoItemAccount.completed).to.be.false;
-    expect(todoItemAccount.id.toNumber()).to.equal(0);
+    const todoAccount = await program.account.todoState.fetch(todoPda);
+    expect(todoAccount.todos.length).to.equal(1);
+    expect(todoAccount.todos[0].title).to.equal(title);
+    expect(todoAccount.todos[0].description).to.equal(description);
+    expect(todoAccount.todos[0].isCompleted).to.be.false;
+    expect(todoAccount.totalTodos.toNumber()).to.equal(1);
 
-    const todoListAccount = await program.account.todoList.fetch(todoListPda);
-    expect(todoListAccount.todoCount.toNumber()).to.equal(1);
+    // Check global counter
+    const globalCounterAccount = await program.account.globalTodoCounter.fetch(globalCounterPda);
+    expect(globalCounterAccount.totalTodos.toNumber()).to.equal(1);
   });
 
-  it("Update a todo item", async () => {
-    const newTitle = "Updated Todo";
-    const newDescription = "This is an updated todo item";
-
-    const [todoItemPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("todo_item"),
-        user.publicKey.toBuffer(),
-        new anchor.BN(0).toArrayLike(Buffer, "le", 8)
-      ],
-      program.programId
-    );
+  it("Add another todo", async () => {
+    const title = "Second Todo";
+    const description = "This is the second todo";
 
     const tx = await program.methods
-      .updateTodo(newTitle, newDescription, true)
+      .addTodo(title, description)
       .accounts({
-        todoItem: todoItemPda,
-        user: user.publicKey,
-        owner: user.publicKey,
+        signer: user.publicKey,
+        todoAccount: todoPda,
+        globalCounter: globalCounterPda,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Add second todo transaction signature", tx);
+
+    const todoAccount = await program.account.todoState.fetch(todoPda);
+    expect(todoAccount.todos.length).to.equal(2);
+    expect(todoAccount.totalTodos.toNumber()).to.equal(2);
+
+    // Check global counter increased
+    const globalCounterAccount = await program.account.globalTodoCounter.fetch(globalCounterPda);
+    expect(globalCounterAccount.totalTodos.toNumber()).to.equal(2);
+  });
+
+  it("Update a todo", async () => {
+    const tx = await program.methods
+      .updateTodo(new anchor.BN(0), true)
+      .accounts({
+        signer: user.publicKey,
+        todoAccount: todoPda,
       })
       .signers([user])
       .rpc();
 
     console.log("Update todo transaction signature", tx);
 
-    const todoItemAccount = await program.account.todoItem.fetch(todoItemPda);
-    expect(todoItemAccount.title).to.equal(newTitle);
-    expect(todoItemAccount.description).to.equal(newDescription);
-    expect(todoItemAccount.completed).to.be.true;
+    const todoAccount = await program.account.todoState.fetch(todoPda);
+    expect(todoAccount.todos[0].isCompleted).to.be.true;
   });
 
-  it("Delete a todo item", async () => {
-    const [todoItemPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("todo_item"),
-        user.publicKey.toBuffer(),
-        new anchor.BN(0).toArrayLike(Buffer, "le", 8)
-      ],
-      program.programId
-    );
-
+  it("Remove a todo", async () => {
     const tx = await program.methods
-      .deleteTodo()
+      .removeTodo(new anchor.BN(0))
       .accounts({
-        todoItem: todoItemPda,
-        user: user.publicKey,
-        owner: user.publicKey,
+        signer: user.publicKey,
+        todoAccount: todoPda,
       })
       .signers([user])
       .rpc();
 
-    console.log("Delete todo transaction signature", tx);
+    console.log("Remove todo transaction signature", tx);
 
-    // Verify the account is closed
-    try {
-      await program.account.todoItem.fetch(todoItemPda);
-      expect.fail("Todo item should have been deleted");
-    } catch (error) {
-      expect(error.message).to.include("Account does not exist");
-    }
+    const todoAccount = await program.account.todoState.fetch(todoPda);
+    expect(todoAccount.todos.length).to.equal(1);
+    expect(todoAccount.todos[0].title).to.equal("Second Todo");
   });
 
-  it("Test large description (near 10MB limit)", async () => {
-    // Create a large description close to the 10MB limit
-    const largeDescription = "A".repeat(10 * 1024 * 1024 - 400); // ~10MB minus overhead
-    const title = "Large Todo";
+  it("Test with multiple users", async () => {
+    // Create a new user
+    const newUser = anchor.web3.Keypair.generate();
+    
+    // Airdrop SOL to new user
+    const airdropSignature = await provider.connection.requestAirdrop(
+      newUser.publicKey,
+      2 * anchor.web3.LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(airdropSignature);
 
-    const [todoItemPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("todo_item"),
-        user.publicKey.toBuffer(),
-        new anchor.BN(1).toArrayLike(Buffer, "le", 8)
-      ],
+    // Find PDA for new user
+    const [newUserTodoPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("TODO_ACC"), newUser.publicKey.toBuffer()],
       program.programId
     );
 
-    const tx = await program.methods
-      .createTodo(title, largeDescription)
+    // Initialize PDA for new user
+    await program.methods
+      .initializePda()
       .accounts({
-        todoItem: todoItemPda,
-        todoList: todoListPda,
-        user: user.publicKey,
+        signer: newUser.publicKey,
+        todoAccount: newUserTodoPda,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user])
+      .signers([newUser])
       .rpc();
 
-    console.log("Create large todo transaction signature", tx);
+    // Add todo for new user
+    await program.methods
+      .addTodo("New User Todo", "Todo from a different user")
+      .accounts({
+        signer: newUser.publicKey,
+        todoAccount: newUserTodoPda,
+        globalCounter: globalCounterPda,
+      })
+      .signers([newUser])
+      .rpc();
 
-    const todoItemAccount = await program.account.todoItem.fetch(todoItemPda);
-    expect(todoItemAccount.title).to.equal(title);
-    expect(todoItemAccount.description).to.equal(largeDescription);
-    expect(todoItemAccount.completed).to.be.false;
+    // Check global counter includes todos from both users
+    const globalCounterAccount = await program.account.globalTodoCounter.fetch(globalCounterPda);
+    expect(globalCounterAccount.totalTodos.toNumber()).to.equal(3); // 2 from first user + 1 from new user
+  });
+
+  it("Test error cases", async () => {
+    // Test title too long
+    try {
+      await program.methods
+        .addTodo("A".repeat(51), "Description")
+        .accounts({
+          signer: user.publicKey,
+          todoAccount: todoPda,
+          globalCounter: globalCounterPda,
+        })
+        .signers([user])
+        .rpc();
+      expect.fail("Should have failed with title too long");
+    } catch (error) {
+      expect(error.toString()).to.include("Title is too long");
+    }
+
+    // Test description too long
+    try {
+      await program.methods
+        .addTodo("Title", "A".repeat(201))
+        .accounts({
+          signer: user.publicKey,
+          todoAccount: todoPda,
+          globalCounter: globalCounterPda,
+        })
+        .signers([user])
+        .rpc();
+      expect.fail("Should have failed with description too long");
+    } catch (error) {
+      expect(error.toString()).to.include("Description is too long");
+    }
   });
 });
