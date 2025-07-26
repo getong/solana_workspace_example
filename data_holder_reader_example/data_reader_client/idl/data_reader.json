@@ -1,0 +1,37 @@
+{
+  "address": "59cnY1rjumvuLbab9MRqFmk62QALDmjFRBzMEupqeyzH",
+  "metadata": {
+    "name": "data_reader",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "read_other_data",
+      "discriminator": [
+        29,
+        161,
+        120,
+        102,
+        233,
+        243,
+        56,
+        57
+      ],
+      "accounts": [
+        {
+          "name": "other_data"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NoData",
+      "msg": "No data"
+    }
+  ]
+}
