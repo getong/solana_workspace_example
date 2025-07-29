@@ -1,0 +1,12 @@
+[package]
+name = "delegate_token_accounts"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+solana-client = "2.3.6"
+solana-sdk = "2.3.1"
+spl-associated-token-account = "7.0.0"
+spl-token = "8.0.0"
+tokio = { version = "1.47.0", features = ["full"] }
